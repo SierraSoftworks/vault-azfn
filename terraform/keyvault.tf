@@ -1,6 +1,6 @@
 # The user which is currently running terraform
-data "azurerm_client_config" "current" {
-}
+data "azurerm_client_config" "current" {}
+data "azuread_client_config" "current" {}
 
 resource "azurerm_key_vault" "unseal" {
   name                       = "${var.prefix}vault${var.suffix}"
