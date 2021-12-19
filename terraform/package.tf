@@ -23,7 +23,7 @@ resource "null_resource" "agent_binary" {
     provisioner "local-exec" {
         command = <<EOH
 set -e
-curl -o vault-agent https://github.com/SierraSoftworks/vault-azfn/releases/download/${var.vault_agent_version}/vault-agent
+curl -o vault-agent https://github.com/SierraSoftworks/vault-azfn/releases/download/v${var.vault_agent_version}/vault-agent
 chmod 0755 vault-agent
 mv vault-agent ${path.module}/../files/vault-agent
 EOH
