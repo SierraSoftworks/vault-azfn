@@ -6,7 +6,7 @@ resource "null_resource" "vault_binary" {
     provisioner "local-exec" {
         command = <<EOH
 set -e
-curl -o vault.zip https://releases.hashicorp.com/vault/${var.vault_version}/vault_${var.vault_version}_linux_amd64.zip
+curl -sSL -o vault.zip https://releases.hashicorp.com/vault/${var.vault_version}/vault_${var.vault_version}_linux_amd64.zip
 unzip vault.zip
 rm vault.zip
 chmod 0755 vault
@@ -23,7 +23,7 @@ resource "null_resource" "agent_binary" {
     provisioner "local-exec" {
         command = <<EOH
 set -e
-curl -o vault-agent https://github.com/SierraSoftworks/vault-azfn/releases/download/v${var.vault_agent_version}/vault-agent
+curl -sSL -o vault-agent https://github.com/SierraSoftworks/vault-azfn/releases/download/v${var.vault_agent_version}/vault-agent
 chmod 0755 vault-agent
 mv vault-agent ${path.module}/../files/vault-agent
 EOH
