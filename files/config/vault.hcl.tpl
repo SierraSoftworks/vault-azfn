@@ -14,9 +14,7 @@ listener "tcp" {
 
 seal "azurekeyvault" {
     tenant_id = "{{ env "AZURE_TENANT_ID" }}"
-    // client_id = "MSI"
-    // client_secret = "MSI"
-    // vault_name = "SET-BY-ENVIRONMENT"
+    vault_name = "{{ env "AZURE_KEYVAULT_VAULT_NAME" }}"
     key_name = "vault-unseal"
 }
 

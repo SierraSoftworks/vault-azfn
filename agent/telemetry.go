@@ -1,10 +1,7 @@
 package agent
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
-	"io"
 	"os"
 	"time"
 
@@ -22,44 +19,34 @@ func GetInsights() appinsights.TelemetryClient {
 	insights := appinsights.NewTelemetryClient(ik)
 	insights.SetIsEnabled(enabled)
 
+	insights.Context().CommonProperties["Category"] = "Vault"
+
 	return insights
 }
 
 type InsightsLogStream struct {
 	insights appinsights.TelemetryClient
-	in       io.Writer
-	scanner  *bufio.Scanner
 }
 
 func NewInsightsLogStream(insights appinsights.TelemetryClient) *InsightsLogStream {
-	buffer := bytes.NewBuffer([]byte{})
-	scanner := bufio.NewScanner(buffer)
-	scanner.Split(bufio.ScanLines)
-
 	return &InsightsLogStream{
 		insights: insights,
-		in:       buffer,
-		scanner:  scanner,
 	}
 }
 
 func (s *InsightsLogStream) Write(p []byte) (n int, err error) {
-	s.in.Write(p)
-
-	for s.scanner.Scan() {
-		props := map[string]string{}
-		if err := json.Unmarshal([]byte(s.scanner.Text()), &props); err != nil {
-			s.insights.TrackTrace(s.scanner.Text(), contracts.Information)
-		} else {
-			t := appinsights.NewTraceTelemetry(props["@message"], getSeverityLevel(props["@level"]))
-			t.Properties = props
-			if ts, err := time.Parse(time.RFC3339, props["@timestamp"]); err == nil {
-				t.Timestamp = ts
-			}
-
-			s.insights.Track(t)
-		}
+	props := map[string]string{}
+	if err := json.Unmarshal(p, &props); err != nil {
+		return os.Stdout.Write(p)
 	}
+
+	t := appinsights.NewTraceTelemetry(props["@message"], getSeverityLevel(props["@level"]))
+	t.Properties = props
+	if ts, err := time.Parse(time.RFC3339, props["@timestamp"]); err == nil {
+		t.Timestamp = ts
+	}
+
+	s.insights.Track(t)
 
 	return len(p), nil
 }

@@ -1,13 +1,5 @@
-// We retrieve information on the client deploying this plan
-// to determine tenant information.
-data "azuread_client_config" "current" {}
-
 variable "location" {
     description = "The Azure location where this app will be deployed."
-}
-
-variable "domain" {
-    description = "The domain at which the Vault server will be accessible."
 }
 
 variable "prefix" {
@@ -22,6 +14,11 @@ variable "suffix" {
 variable "vault_version" {
     description = "The version of Hashicorp Vault to use."
     default = "1.9.0"
+}
+
+variable "vault_agent_version" {
+    description = "The version of the Vault agent to use."
+    default = "1.0.0"
 }
 
 variable "log_workspace_id" {

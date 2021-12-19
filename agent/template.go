@@ -7,17 +7,21 @@ import (
 	"text/template"
 )
 
+var templateFunctions = template.FuncMap{
+	"env": func(key string) string {
+		return os.Getenv(key)
+	},
+}
+
 func ApplyTemplate(src, dst string) {
 	content, err := ioutil.ReadFile(src)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	tmpl := template.Must(template.New("template").Funcs(template.FuncMap{
-		"env": func(key string) string {
-			return os.Getenv(key)
-		},
-	}).Parse(string(content)))
+	tmpl := template.Must(template.New("template").
+		Funcs(templateFunctions).
+		Parse(string(content)))
 
 	f, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

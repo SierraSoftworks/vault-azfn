@@ -4,11 +4,16 @@
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
-        "excludedTypes": "Request"
+        "excludedTypes": "Request",
+        "maxTelemetryItemsPerSecond": 20
       }
     },
     "logLevel": {
-      "default": "Warning"
+      "default": "Warning",
+      "Function": "Information",
+      "Function.function": "Information",
+      "Host.Function.Console": "Information",
+      "Vault": "Debug"
     }
   },
   "extensions": {

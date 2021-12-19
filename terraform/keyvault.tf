@@ -24,18 +24,6 @@ resource "azurerm_key_vault" "unseal" {
     ]
   }
 
-  access_policy {
-    tenant_id = data.azuread_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-    key_permissions = [
-      "get",
-      "list",
-      "create",
-      "delete",
-      "update",
-    ]
-  }
-
   network_acls {
     default_action = "Allow"
     bypass         = "AzureServices"

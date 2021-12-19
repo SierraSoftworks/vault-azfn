@@ -8,6 +8,8 @@ import (
 	"github.com/sierrasoftworks/vault-azfn/agent"
 )
 
+var version = "0.0.0-dev"
+
 func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Usage: vault-launcher <app> [args...]")
@@ -15,6 +17,8 @@ func main() {
 
 	insights := agent.GetInsights()
 	defer insights.Channel().Close()
+
+	insights.Context().Tags.Application().SetVer(version)
 
 	for i, arg := range os.Args[1:] {
 		if strings.HasSuffix(arg, ".tpl") {

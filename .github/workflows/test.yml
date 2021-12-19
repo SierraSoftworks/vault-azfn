@@ -1,0 +1,28 @@
+name: Test
+on:
+  - push
+  - pull_request
+
+jobs:
+  test-agent:
+    runs-on: ubuntu-latest
+    name: Agent
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - run: go build -v ./...
+      - run: go test -v ./...
+      
+  test-terraform:
+    runs-on: ubuntu-latest
+    name: Terraform
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: hashicorp/setup-terraform@v1
+      - run: terraform -chdir=./terraform init
+      - run: terraform -chdir=./terraform validate
