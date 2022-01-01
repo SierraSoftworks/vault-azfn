@@ -4,12 +4,17 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"text/template"
 )
 
 var templateFunctions = template.FuncMap{
 	"env": func(key string) string {
 		return os.Getenv(key)
+	},
+	"cwd": func(paths ...string) string {
+		wd, _ := os.Getwd()
+		return path.Join(append([]string{wd}, paths...)...)
 	},
 }
 
