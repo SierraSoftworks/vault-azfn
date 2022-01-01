@@ -37,6 +37,10 @@ func main() {
 		}
 	}
 
+	if os.Getenv("VAULT_AGENT_SET_EXECUTABLE_PATTERN") != "" {
+		agent.SetExecutablePattern(insights, os.Getenv("VAULT_AGENT_SET_EXECUTABLE_PATTERN"))
+	}
+
 	binary := os.Args[1]
 	args := os.Args[2:]
 

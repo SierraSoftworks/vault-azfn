@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -10,32 +8,6 @@ import (
 
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 )
-
-func ensureExecutable(insights appinsights.TelemetryClient, app string) {
-	stat, err := os.Stat(app)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	e := appinsights.NewEventTelemetry("launcher.ensureExecutable")
-
-	e.Properties["app"] = stat.Name()
-	e.Properties["mode_initial"] = stat.Mode().String()
-	e.Properties["size"] = fmt.Sprintf("%d bytes", stat.Size())
-
-	if stat.Mode()&0111 == 0 {
-		err := os.Chmod(app, stat.Mode()|0111)
-		if err != nil {
-			e.Properties["mode_final"] = stat.Mode().String()
-			e.Properties["error"] = err.Error()
-		} else {
-			e.Properties["mode_final"] = (stat.Mode() | 0111).String()
-		}
-	}
-
-	insights.Track(e)
-
-}
 
 func RunApp(insights appinsights.TelemetryClient, app string, args []string) error {
 	ensureExecutable(insights, app)
