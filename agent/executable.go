@@ -32,7 +32,7 @@ func ensureExecutable(insights appinsights.TelemetryClient, app string) {
 		log.Fatal(err)
 	}
 
-	if !stat.IsDir() {
+	if stat.IsDir() {
 		return
 	}
 
