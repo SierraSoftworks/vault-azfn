@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -74,7 +75,12 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 		span.SetName(string(p))
 		span.SetAttributes(attribute.String("raw_message", string(p)))
 	} else {
-		for _, line := range strings.Split(string(p), "\n") {
+		for _, line := range strings.Split(strings.TrimSpace(string(p)), "\n") {
+			line := strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+
 			if err := s.WriteMessage(line); err != nil {
 				s.span.RecordError(err, trace.WithAttributes(attribute.String("raw_message", line)))
 			}
@@ -90,7 +96,7 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 
 	span.SetAttributes(attribute.String("raw_message", msg))
 
-	props := map[string]string{}
+	props := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(msg), &props); err != nil {
 		span.SetName(msg)
 		span.RecordError(err)
@@ -100,11 +106,32 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 
 	properties := []attribute.KeyValue{}
 	for k, v := range props {
-		properties = append(properties, attribute.String(k, v))
+		switch v := v.(type) {
+		case string:
+			properties = append(properties, attribute.String(k, v))
+		case int:
+			properties = append(properties, attribute.Int(k, v))
+		case float64:
+			properties = append(properties, attribute.Float64(k, v))
+		case bool:
+			properties = append(properties, attribute.Bool(k, v))
+		default:
+			out := bytes.NewBufferString("")
+			json.NewEncoder(out).Encode(v)
+			properties = append(properties, attribute.String(k, out.String()))
+		}
 	}
 
 	span.SetAttributes(properties...)
-	span.SetName(props["@message"])
+
+	switch message := props["message"].(type) {
+	case string:
+		span.SetName(message)
+	default:
+		out := bytes.NewBufferString("")
+		json.NewEncoder(out).Encode(message)
+		span.SetName(out.String())
+	}
 
 	return nil
 }
