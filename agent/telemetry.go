@@ -111,6 +111,11 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 			continue
 		}
 
+		if k == "@level" && v == "error" {
+			span.SetStatus(codes.Error, toString(props["@message"]))
+			continue
+		}
+
 		switch v := v.(type) {
 		case string:
 			properties = append(properties, attribute.String(k, v))
