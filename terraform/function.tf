@@ -50,7 +50,7 @@ resource "azurerm_function_app" "server" {
   app_service_plan_id        = azurerm_app_service_plan.server.id
   storage_account_name       = azurerm_storage_account.server.name
   storage_account_access_key = azurerm_storage_account.server.primary_access_key
-  version                    = "~3"
+  version                    = "~4"
   os_type                    = "linux"
 
   https_only = true
@@ -72,7 +72,8 @@ resource "azurerm_function_app" "server" {
     "VAULT_AZUREKEYVAULT_VAULT_NAME": "${var.prefix}vault${var.suffix}"
     "VAULT_AZUREKEYVAULT_KEY_NAME": "vault-unseal",
     "VAULT_API_ADDR": "https://${azurerm_function_app.server.default_hostname}",
-    "APPINSIGHTS_INSTRUMENTATIONKEY": azurerm_application_insights.vault.instrumentation_key,
-    "APPLICATIONINSIGHTS_CONNECTION_STRING": azurerm_application_insights.vault.connection_string,
+    "OTEL_EXPORTER_OTLP_ENDPOINT": var.opentelemetry.endpoint,
+    "OTEL_EXPORTER_OTLP_HEADERS": var.opentelemetry.headers,
+    "OTEL_SERVICE_NAME": var.opentelemetry.service_name,
   }
 }

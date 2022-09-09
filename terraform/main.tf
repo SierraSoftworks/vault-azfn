@@ -21,6 +21,16 @@ variable "vault_agent_version" {
   default     = "1.2.1"
 }
 
-variable "log_workspace_id" {
-  description = "The workspace ID of the log analytics workspace to use."
+variable "opentelemetry" {
+  description = "The configuration used for the OpenTelemetry emission performed the Vault agent."
+  default = {
+    endpoint = ""
+    service_name = "vault"
+    headers = ""
+  }
+  type = object({
+    endpoint = string
+    service_name = string
+    headers = string
+  })
 }
