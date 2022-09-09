@@ -13,12 +13,12 @@ variable "suffix" {
 
 variable "vault_version" {
   description = "The version of Hashicorp Vault to use."
-  default     = "1.10.0"
+  default     = "1.11.2"
 }
 
 variable "vault_agent_version" {
   description = "The version of the Vault agent to use."
-  default     = "1.2.1"
+  default     = "1.3.1"
 }
 
 variable "opentelemetry" {
