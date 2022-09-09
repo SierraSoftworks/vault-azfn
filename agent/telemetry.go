@@ -67,9 +67,17 @@ func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogSt
 }
 
 func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
-	for _, line := range strings.Split(string(p), "\n") {
-		if err := s.WriteMessage(line); err != nil {
-			s.span.RecordError(err, trace.WithAttributes(attribute.String("raw_message", line)))
+	if !strings.HasPrefix(string(p), `{"`) {
+		_, span := otel.Tracer("vault").Start(s.ctx, "log", trace.WithSpanKind(trace.SpanKindConsumer))
+		defer span.End()
+
+		span.SetName(string(p))
+		span.SetAttributes(attribute.String("raw_message", string(p)))
+	} else {
+		for _, line := range strings.Split(string(p), "\n") {
+			if err := s.WriteMessage(line); err != nil {
+				s.span.RecordError(err, trace.WithAttributes(attribute.String("raw_message", line)))
+			}
 		}
 	}
 
@@ -77,7 +85,7 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 }
 
 func (s *TelemetryLogStream) WriteMessage(msg string) error {
-	_, span := otel.Tracer("vault").Start(s.ctx, "launcher.TelemetryLogStream.Write", trace.WithSpanKind(trace.SpanKindConsumer))
+	_, span := otel.Tracer("vault").Start(s.ctx, "log", trace.WithSpanKind(trace.SpanKindConsumer))
 	defer span.End()
 
 	span.SetAttributes(attribute.String("raw_message", msg))
