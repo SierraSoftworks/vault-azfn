@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -15,10 +16,9 @@ func main() {
 		log.Fatal("Usage: vault-launcher <app> [args...]")
 	}
 
-	insights := agent.GetInsights()
-	defer insights.Channel().Close()
-
-	insights.Context().Tags.Application().SetVer(version)
+	ctx := context.Background()
+	tp := agent.NewTraceProvider(ctx, version)
+	defer func() { _ = tp.Shutdown(ctx) }()
 
 	for i, arg := range os.Args[1:] {
 		if strings.HasSuffix(arg, ".tpl") {
@@ -38,13 +38,13 @@ func main() {
 	}
 
 	if os.Getenv("VAULT_AGENT_SET_EXECUTABLE_PATTERN") != "" {
-		agent.SetExecutablePattern(insights, os.Getenv("VAULT_AGENT_SET_EXECUTABLE_PATTERN"))
+		agent.SetExecutablePattern(ctx, os.Getenv("VAULT_AGENT_SET_EXECUTABLE_PATTERN"))
 	}
 
 	binary := os.Args[1]
 	args := os.Args[2:]
 
-	err := agent.RunApp(insights, binary, args)
+	err := agent.RunApp(ctx, binary, args)
 	if err != nil {
 		log.Fatal(err)
 	}

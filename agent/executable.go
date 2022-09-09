@@ -1,56 +1,60 @@
 package agent
 
 import (
-	"fmt"
-	"log"
+	"context"
 	"os"
 	"path/filepath"
 
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
-func SetExecutablePattern(insights appinsights.TelemetryClient, pattern string) {
-	e := appinsights.NewEventTelemetry("launcher.setExecutablePattern")
-	e.Properties["pattern"] = pattern
-	defer insights.Track(e)
+func SetExecutablePattern(ctx context.Context, pattern string) {
+	ctx, span := otel.Tracer("vault").Start(ctx, "launcher.SetExecutablePattern")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("pattern", pattern))
 
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		insights.TrackException(err)
+		span.SetStatus(codes.Error, err.Error())
 		return
 	}
 
 	for _, match := range matches {
-		ensureExecutable(insights, match)
+		ensureExecutable(ctx, match)
 	}
 }
 
-func ensureExecutable(insights appinsights.TelemetryClient, app string) {
+func ensureExecutable(ctx context.Context, app string) {
+	_, span := otel.Tracer("vault").Start(ctx, "launcher.ensureExecutable")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("app", app))
+
 	stat, err := os.Stat(app)
 	if err != nil {
-		insights.TrackException(err)
-		log.Fatal(err)
+		span.SetStatus(codes.Error, err.Error())
+		return
 	}
 
 	if stat.IsDir() {
 		return
 	}
 
-	e := appinsights.NewEventTelemetry("launcher.ensureExecutable")
-
-	e.Properties["app"] = stat.Name()
-	e.Properties["mode_initial"] = stat.Mode().String()
-	e.Properties["size"] = fmt.Sprintf("%d bytes", stat.Size())
+	span.SetAttributes(
+		attribute.String("mode.initial", stat.Mode().String()),
+		attribute.String("app", stat.Name()),
+		attribute.Int64("size", stat.Size()))
 
 	if stat.Mode()&0111 == 0 {
 		err := os.Chmod(app, stat.Mode()|0111)
 		if err != nil {
-			e.Properties["mode_final"] = stat.Mode().String()
-			e.Properties["error"] = err.Error()
+			span.SetAttributes(attribute.String("mode.final", stat.Mode().String()))
+			span.SetStatus(codes.Error, err.Error())
 		} else {
-			e.Properties["mode_final"] = (stat.Mode() | 0111).String()
+			span.SetAttributes(attribute.String("mode.final", (stat.Mode() | 0111).String()))
 		}
 	}
-
-	insights.Track(e)
 }

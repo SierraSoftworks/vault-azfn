@@ -1,16 +1,22 @@
 package agent
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func RunApp(insights appinsights.TelemetryClient, app string, args []string) error {
-	ensureExecutable(insights, app)
+func RunApp(ctx context.Context, app string, args []string) error {
+	ctx, span := otel.Tracer("vault").Start(ctx, "launcher.RunApp")
+	defer span.End()
+
+	ensureExecutable(ctx, app)
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -18,8 +24,8 @@ func RunApp(insights appinsights.TelemetryClient, app string, args []string) err
 	}
 
 	cmd := exec.Command(app, args...)
-	cmd.Stdout = NewInsightsLogStream(insights)
-	cmd.Stderr = NewInsightsLogStream(insights)
+	cmd.Stdout = NewTelemetryLogStream(ctx, span)
+	cmd.Stderr = NewTelemetryLogStream(ctx, span)
 	cmd.Env = os.Environ()
 	cmd.Dir = cwd
 
@@ -41,17 +47,14 @@ func RunApp(insights appinsights.TelemetryClient, app string, args []string) err
 		}
 	}()
 
-	e := appinsights.NewEventTelemetry("launcher.run.startApp")
-	e.Properties["app"] = app
-	e.Properties["args"] = strings.Join(args, " ")
-	e.Properties["cwd"] = cwd
-	insights.Track(e)
+	span.AddEvent("Starting Vault", trace.WithAttributes(attribute.String("app", app), attribute.StringSlice("args", args), attribute.String("cwd", cwd)))
 
 	err = cmd.Run()
 
-	e.Name = "launcher.run.exit"
-	e.Properties["status"] = err.Error()
-	insights.Track(e)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+	}
+
 	exit <- struct{}{}
 
 	return err

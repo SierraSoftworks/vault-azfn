@@ -1,67 +1,92 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"time"
 
-	"github.com/microsoft/ApplicationInsights-Go/appinsights"
-	"github.com/microsoft/ApplicationInsights-Go/appinsights/contracts"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func GetInsights() appinsights.TelemetryClient {
-	ik := os.Getenv("APPINSIGHTS_INSTRUMENTATIONKEY")
-	enabled := ik != ""
-	if ik == "" {
-		ik = "NULL"
+func NewTraceProvider(ctx context.Context, version string) *sdktrace.TracerProvider {
+	resource, err := resource.Merge(
+		resource.Environment(),
+		resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("vault"),
+			semconv.ServiceNamespaceKey.String("github.com/SierraSoftworks/vault-azfn"),
+			semconv.ServiceVersionKey.String(version),
+		))
+
+	if err != nil {
+		panic(err)
 	}
 
-	insights := appinsights.NewTelemetryClient(ik)
-	insights.SetIsEnabled(enabled)
+	exporter, err := newExporter(ctx)
+	if err != nil {
+		panic(err)
+	}
 
-	insights.Context().CommonProperties["Category"] = "Vault"
+	tracer := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource),
+	)
 
-	return insights
+	return tracer
 }
 
-type InsightsLogStream struct {
-	insights appinsights.TelemetryClient
+func newExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") == "" {
+		return stdouttrace.New(stdouttrace.WithPrettyPrint())
+	}
+
+	client := otlptracegrpc.NewClient()
+	return otlptrace.New(ctx, client)
 }
 
-func NewInsightsLogStream(insights appinsights.TelemetryClient) *InsightsLogStream {
-	return &InsightsLogStream{
-		insights: insights,
+type TelemetryLogStream struct {
+	ctx  context.Context
+	span trace.Span
+}
+
+func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogStream {
+	return &TelemetryLogStream{
+		ctx,
+		span,
 	}
 }
 
-func (s *InsightsLogStream) Write(p []byte) (n int, err error) {
+func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 	props := map[string]string{}
 	if err := json.Unmarshal(p, &props); err != nil {
+		s.span.AddEvent(
+			"Failed to parse log message",
+			trace.WithAttributes(attribute.String("message", string(p)), attribute.String("error", err.Error())),
+			trace.WithStackTrace(true))
+
 		return os.Stdout.Write(p)
 	}
 
-	t := appinsights.NewTraceTelemetry(props["@message"], getSeverityLevel(props["@level"]))
-	t.Properties = props
+	options := []trace.EventOption{}
 	if ts, err := time.Parse(time.RFC3339, props["@timestamp"]); err == nil {
-		t.Timestamp = ts
+		options = append(options, trace.WithTimestamp(ts))
 	}
 
-	s.insights.Track(t)
+	properties := []attribute.KeyValue{}
+	for k, v := range props {
+		properties = append(properties, attribute.String(k, v))
+	}
+	options = append(options, trace.WithAttributes(properties...))
+
+	s.span.AddEvent(props["@message"], options...)
 
 	return len(p), nil
-}
-
-func getSeverityLevel(level string) contracts.SeverityLevel {
-	switch level {
-	case "debug":
-		return contracts.Verbose
-	case "info":
-		return contracts.Information
-	case "warning":
-		return contracts.Warning
-	case "error":
-		return contracts.Error
-	default:
-		return contracts.Information
-	}
 }

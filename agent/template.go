@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -19,7 +18,7 @@ var templateFunctions = template.FuncMap{
 }
 
 func ApplyTemplate(src, dst string) {
-	content, err := ioutil.ReadFile(src)
+	content, err := os.ReadFile(src)
 	if err != nil {
 		log.Fatal(err)
 	}
