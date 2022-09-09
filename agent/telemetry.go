@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -66,18 +67,27 @@ func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogSt
 }
 
 func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
+	for _, line := range strings.Split(string(p), "\n") {
+		if err := s.WriteMessage(line); err != nil {
+			s.span.RecordError(err, trace.WithAttributes(attribute.String("raw_message", line)))
+		}
+	}
+
+	return os.Stdout.Write(p)
+}
+
+func (s *TelemetryLogStream) WriteMessage(msg string) error {
 	_, span := otel.Tracer("vault").Start(s.ctx, "launcher.TelemetryLogStream.Write", trace.WithSpanKind(trace.SpanKindConsumer))
 	defer span.End()
 
-	span.SetAttributes(attribute.String("message", string(p)))
+	span.SetAttributes(attribute.String("raw_message", msg))
 
 	props := map[string]string{}
-	if err := json.Unmarshal(p, &props); err != nil {
-		span.SetName(string(p))
+	if err := json.Unmarshal([]byte(msg), &props); err != nil {
+		span.SetName(msg)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-
-		return os.Stdout.Write(p)
+		return err
 	}
 
 	properties := []attribute.KeyValue{}
@@ -88,5 +98,5 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 	span.SetAttributes(properties...)
 	span.SetName(props["@message"])
 
-	return len(p), nil
+	return nil
 }
