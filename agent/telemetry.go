@@ -106,6 +106,11 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 
 	properties := []attribute.KeyValue{}
 	for k, v := range props {
+		if k == "error" {
+			span.SetStatus(codes.Error, toString(v))
+			continue
+		}
+
 		switch v := v.(type) {
 		case string:
 			properties = append(properties, attribute.String(k, v))
@@ -116,22 +121,30 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 		case bool:
 			properties = append(properties, attribute.Bool(k, v))
 		default:
-			out := bytes.NewBufferString("")
-			json.NewEncoder(out).Encode(v)
-			properties = append(properties, attribute.String(k, out.String()))
+			properties = append(properties, attribute.String(k, toJsonString(v)))
 		}
 	}
 
 	span.SetAttributes(properties...)
 
-	switch message := props["message"].(type) {
-	case string:
-		span.SetName(message)
-	default:
-		out := bytes.NewBufferString("")
-		json.NewEncoder(out).Encode(message)
-		span.SetName(out.String())
-	}
+	span.SetName(toString(props["@message"]))
 
 	return nil
+}
+
+func toString(v interface{}) string {
+	switch v := v.(type) {
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	default:
+		return toJsonString(v)
+	}
+}
+
+func toJsonString(v interface{}) string {
+	out := bytes.NewBufferString("")
+	json.NewEncoder(out).Encode(v)
+	return out.String()
 }
