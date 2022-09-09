@@ -18,7 +18,7 @@ variable "vault_version" {
 
 variable "vault_agent_version" {
   description = "The version of the Vault agent to use."
-  default     = "1.3.2"
+  default     = "1.3.3"
 }
 
 variable "opentelemetry" {

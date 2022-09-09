@@ -69,14 +69,13 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 	_, span := otel.Tracer("vault").Start(s.ctx, "launcher.TelemetryLogStream.Write", trace.WithSpanKind(trace.SpanKindConsumer))
 	defer span.End()
 
+	span.SetAttributes(attribute.String("message", string(p)))
+
 	props := map[string]string{}
 	if err := json.Unmarshal(p, &props); err != nil {
+		span.SetName(string(p))
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		s.span.AddEvent(
-			"Failed to parse log message",
-			trace.WithAttributes(attribute.String("message", string(p)), attribute.String("error", err.Error())),
-			trace.WithStackTrace(true))
 
 		return os.Stdout.Write(p)
 	}
