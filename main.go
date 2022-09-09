@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/sierrasoftworks/vault-azfn/agent"
+	"go.opentelemetry.io/otel"
 )
 
 var version = "0.0.0-dev"
@@ -19,6 +20,8 @@ func main() {
 	ctx := context.Background()
 	tp := agent.NewTraceProvider(ctx, version)
 	defer func() { _ = tp.Shutdown(ctx) }()
+
+	otel.SetTracerProvider(tp)
 
 	for i, arg := range os.Args[1:] {
 		if strings.HasSuffix(arg, ".tpl") {
