@@ -13,7 +13,7 @@ import (
 )
 
 func RunApp(ctx context.Context, app string, args []string) error {
-	ctx, span := otel.Tracer("vault").Start(ctx, "launcher.RunApp")
+	ctx, span := otel.Tracer("vault").Start(ctx, "launcher.RunApp", trace.WithSpanKind(trace.SpanKindServer))
 	defer span.End()
 
 	ensureExecutable(ctx, app)
@@ -39,6 +39,7 @@ func RunApp(ctx context.Context, app string, args []string) error {
 			select {
 			case s := <-c:
 				if cmd.Process != nil {
+					span.AddEvent("Propagating signal to child process.", trace.WithAttributes(attribute.String("signal", s.String())))
 					cmd.Process.Signal(s)
 				}
 			case <-exit:
@@ -52,6 +53,7 @@ func RunApp(ctx context.Context, app string, args []string) error {
 	err = cmd.Run()
 
 	if err != nil {
+		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
 

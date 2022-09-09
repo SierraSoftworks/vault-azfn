@@ -18,6 +18,7 @@ func SetExecutablePattern(ctx context.Context, pattern string) {
 
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
+		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return
 	}
@@ -35,6 +36,7 @@ func ensureExecutable(ctx context.Context, app string) {
 
 	stat, err := os.Stat(app)
 	if err != nil {
+		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return
 	}
@@ -52,6 +54,7 @@ func ensureExecutable(ctx context.Context, app string) {
 		err := os.Chmod(app, stat.Mode()|0111)
 		if err != nil {
 			span.SetAttributes(attribute.String("mode.final", stat.Mode().String()))
+			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 		} else {
 			span.SetAttributes(attribute.String("mode.final", (stat.Mode() | 0111).String()))

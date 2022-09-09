@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -65,8 +66,13 @@ func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogSt
 }
 
 func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
+	_, span := otel.Tracer("vault").Start(s.ctx, "launcher.TelemetryLogStream.Write", trace.WithSpanKind(trace.SpanKindConsumer))
+	defer span.End()
+
 	props := map[string]string{}
 	if err := json.Unmarshal(p, &props); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		s.span.AddEvent(
 			"Failed to parse log message",
 			trace.WithAttributes(attribute.String("message", string(p)), attribute.String("error", err.Error())),
@@ -75,18 +81,13 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 		return os.Stdout.Write(p)
 	}
 
-	options := []trace.EventOption{}
-	if ts, err := time.Parse(time.RFC3339, props["@timestamp"]); err == nil {
-		options = append(options, trace.WithTimestamp(ts))
-	}
-
 	properties := []attribute.KeyValue{}
 	for k, v := range props {
 		properties = append(properties, attribute.String(k, v))
 	}
-	options = append(options, trace.WithAttributes(properties...))
 
-	s.span.AddEvent(props["@message"], options...)
+	span.SetAttributes(properties...)
+	span.SetName(props["@message"])
 
 	return len(p), nil
 }
