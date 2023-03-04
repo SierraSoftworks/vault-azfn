@@ -5,7 +5,7 @@
       "samplingSettings": {
         "isEnabled": true,
         "excludedTypes": "Request",
-        "maxTelemetryItemsPerSecond": 20
+        "maxTelemetryItemsPerSecond": 10
       }
     },
     "logLevel": {
@@ -13,7 +13,7 @@
       "Function": "Information",
       "Function.function": "Information",
       "Host.Function.Console": "Information",
-      "Vault": "Debug"
+      "Vault": "Information"
     }
   },
   "extensions": {
@@ -28,7 +28,7 @@
   "customHandler": {
     "enableForwardingHttpRequest": true,
     "description": {
-      "defaultExecutablePath": "vault-launcher",
+      "defaultExecutablePath": "vault-agent",
       "arguments": [
         "./vault",
         "server",

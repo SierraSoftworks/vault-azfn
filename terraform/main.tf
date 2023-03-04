@@ -1,9 +1,20 @@
+// We retrieve information on the client deploying this plan
+// to determine tenant information.
+data "azuread_client_config" "current" {}
+
 variable "location" {
   description = "The Azure location where this app will be deployed."
+  default     = "North Europe"
+}
+
+variable "domain" {
+  description = "The domain root at which the Vault server will be accessible."
+  default     = "sierrasoftworks.com"
 }
 
 variable "prefix" {
   description = "The prefix used to generate globally unique names for resources."
+  default     = "sierra"
 }
 
 variable "suffix" {
@@ -13,7 +24,7 @@ variable "suffix" {
 
 variable "vault_version" {
   description = "The version of Hashicorp Vault to use."
-  default     = "1.11.2"
+  default     = "1.13.0"
 }
 
 variable "vault_agent_version" {
@@ -21,16 +32,11 @@ variable "vault_agent_version" {
   default     = "1.3.6"
 }
 
-variable "opentelemetry" {
-  description = "The configuration used for the OpenTelemetry emission performed the Vault agent."
-  default = {
-    endpoint = ""
-    service_name = "vault"
-    headers = ""
-  }
-  type = object({
-    endpoint = string
-    service_name = string
-    headers = string
-  })
+variable "vault_github_plugin_version" {
+  description = "The version of the Vault GitHub plugin to use."
+  default     = "2.0.0"
+}
+
+variable "honeycomb_key" {
+  description = "The Honeycomb API key to use for logging."
 }

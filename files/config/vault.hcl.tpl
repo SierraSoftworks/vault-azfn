@@ -3,6 +3,8 @@ disable_clustering           = true
 disable_mlock                = true
 ui                           = true
 
+plugin_directory = "{{ cwd "plugins" }}"
+
 log_format = "json"
 log_level  = "Info"
 
@@ -14,7 +16,6 @@ listener "tcp" {
 
 seal "azurekeyvault" {
     tenant_id = "{{ env "AZURE_TENANT_ID" }}"
-    vault_name = "{{ env "AZURE_KEYVAULT_VAULT_NAME" }}"
     key_name = "vault-unseal"
 }
 

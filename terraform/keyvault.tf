@@ -1,6 +1,6 @@
 # The user which is currently running terraform
-data "azurerm_client_config" "current" {}
-data "azuread_client_config" "current" {}
+data "azurerm_client_config" "current" {
+}
 
 resource "azurerm_key_vault" "unseal" {
   name                       = "${var.prefix}vault${var.suffix}"
@@ -15,12 +15,24 @@ resource "azurerm_key_vault" "unseal" {
   enabled_for_deployment = true
 
   access_policy {
-    tenant_id = azurerm_function_app.server.identity.0.tenant_id
-    object_id = azurerm_function_app.server.identity.0.principal_id
+    tenant_id = azurerm_linux_function_app.server.identity.0.tenant_id
+    object_id = azurerm_linux_function_app.server.identity.0.principal_id
     key_permissions = [
-      "get",
-      "wrapKey",
-      "unwrapKey",
+      "Get",
+      "WrapKey",
+      "UnwrapKey",
+    ]
+  }
+
+  access_policy {
+    tenant_id = data.azuread_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+    key_permissions = [
+      "Get",
+      "List",
+      "Create",
+      "Delete",
+      "Update",
     ]
   }
 

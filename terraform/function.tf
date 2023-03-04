@@ -1,79 +1,83 @@
-
-resource "azurerm_storage_account" "server" {
-  name                     = "${var.prefix}vaultfn${var.suffix}"
-  resource_group_name      = azurerm_resource_group.server.name
-  location                 = azurerm_resource_group.server.location
-  account_tier             = "Standard"
-  account_replication_type = "ZRS"
-}
-
-resource "azurerm_storage_container" "server" {
-  name                  = "package"
-  storage_account_name  = azurerm_storage_account.server.name
-  container_access_type = "private"
-}
-
-data "azurerm_storage_account_blob_container_sas" "package" {
-  connection_string = azurerm_storage_account.server.primary_connection_string
-  container_name    = azurerm_storage_container.server.name
-
-  start = timestamp()
-  expiry = timeadd(timestamp(), "8000h")
-
-  permissions {
-    read   = true
-    add    = false
-    create = false
-    write  = false
-    delete = false
-    list   = false
-  }
-}
-
-resource "azurerm_app_service_plan" "server" {
+resource "azurerm_service_plan" "server" {
   name                = "vault-serviceplan"
   location            = azurerm_resource_group.server.location
   resource_group_name = azurerm_resource_group.server.name
-  kind                = "functionapp"
-  reserved            = true
-
-  sku {
-    tier = "Dynamic"
-    size = "Y1"
-  }
+  os_type             = "Linux"
+  sku_name            = "Y1"
 }
 
-resource "azurerm_function_app" "server" {
+data "azurerm_linux_function_app" "server" {
+  name                = "${var.prefix}vault${var.suffix}"
+  resource_group_name = azurerm_resource_group.server.name
+}
+
+resource "azurerm_linux_function_app" "server" {
   name                       = "${var.prefix}vault${var.suffix}"
   location                   = azurerm_resource_group.server.location
   resource_group_name        = azurerm_resource_group.server.name
-  app_service_plan_id        = azurerm_app_service_plan.server.id
+  service_plan_id            = azurerm_service_plan.server.id
   storage_account_name       = azurerm_storage_account.server.name
   storage_account_access_key = azurerm_storage_account.server.primary_access_key
-  version                    = "~4"
-  os_type                    = "linux"
 
   https_only = true
 
   site_config {
     app_scale_limit = 1
+
+    cors {
+      allowed_origins     = []
+      support_credentials = false
+    }
   }
-  
+
   identity {
     type = "SystemAssigned"
   }
 
-  app_settings = {
-    "WEBSITE_RUN_FROM_PACKAGE": "${azurerm_storage_blob.package.url}${data.azurerm_storage_account_blob_container_sas.package.sas}",
-    "AZURE_TENANT_ID": data.azurerm_client_config.current.tenant_id,
-    "AZURE_ACCOUNT_NAME": azurerm_storage_account.vault.name,
-    "AZURE_BLOB_CONTAINER": azurerm_storage_container.data.name,
-    "AZURE_STORAGE_KEY": azurerm_storage_account.vault.primary_access_key,
-    "VAULT_AZUREKEYVAULT_VAULT_NAME": "${var.prefix}vault${var.suffix}"
-    "VAULT_AZUREKEYVAULT_KEY_NAME": "vault-unseal",
-    "VAULT_API_ADDR": "https://${azurerm_function_app.server.default_hostname}",
-    "OTEL_EXPORTER_OTLP_ENDPOINT": var.opentelemetry.endpoint,
-    "OTEL_EXPORTER_OTLP_HEADERS": var.opentelemetry.headers,
-    "OTEL_SERVICE_NAME": var.opentelemetry.service_name,
+  lifecycle {
+    ignore_changes = [
+      site_config[0].application_insights_key,
+      site_config[0].application_insights_connection_string,
+    ]
   }
+
+  app_settings = merge(
+    data.azurerm_linux_function_app.server.app_settings,
+    {
+      "WEBSITE_RUN_FROM_PACKAGE" : "${azurerm_storage_blob.package.url}${data.azurerm_storage_account_blob_container_sas.package.sas}",
+      "AZURE_TENANT_ID" : data.azurerm_client_config.current.tenant_id,
+      "AZURE_ACCOUNT_NAME" : azurerm_storage_account.vault.name,
+      "AZURE_BLOB_CONTAINER" : azurerm_storage_container.data.name,
+      "AZURE_STORAGE_KEY" : azurerm_storage_account.vault.primary_access_key,
+      "VAULT_AZUREKEYVAULT_VAULT_NAME" : "${var.prefix}vault${var.suffix}"
+      "VAULT_AZUREKEYVAULT_KEY_NAME" : "vault-unseal",
+      "VAULT_API_ADDR" : "https://vault.${var.domain}",
+      "OTEL_EXPORTER_OTLP_ENDPOINT" : "https://api.honeycomb.io:443",
+      "OTEL_EXPORTER_OTLP_HEADERS" : "x-honeycomb-team=${var.honeycomb_key}",
+      "VAULT_AGENT_SET_EXECUTABLE_PATTERN" : "./plugins/*",
+  })
+}
+
+resource "azurerm_app_service_custom_hostname_binding" "vault" {
+  hostname            = "vault.${var.domain}"
+  app_service_name    = azurerm_linux_function_app.server.name
+  resource_group_name = azurerm_resource_group.server.name
+
+  lifecycle {
+    ignore_changes = [ssl_state, thumbprint]
+  }
+
+  depends_on = [
+    azurerm_dns_txt_record.vault
+  ]
+}
+
+resource "azurerm_app_service_managed_certificate" "vault" {
+  custom_hostname_binding_id = azurerm_app_service_custom_hostname_binding.vault.id
+}
+
+resource "azurerm_app_service_certificate_binding" "vault" {
+  hostname_binding_id = azurerm_app_service_custom_hostname_binding.vault.id
+  certificate_id      = azurerm_app_service_managed_certificate.vault.id
+  ssl_state           = "SniEnabled"
 }
