@@ -50,7 +50,7 @@ data "archive_file" "server" {
   depends_on = [null_resource.vault_binary, null_resource.agent_binary]
 
   type        = "zip"
-  output_path = "${path.module}/files/package.zip"
+  output_path = "${path.module}/build/package.zip"
   source_dir = "${path.module}/../files/"
 }
 

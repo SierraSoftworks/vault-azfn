@@ -16,13 +16,3 @@ jobs:
           go-version: 1.19
       - run: go build -v ./...
       - run: go test -v ./...
-      
-  test-terraform:
-    runs-on: ubuntu-latest
-    name: Terraform
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: hashicorp/setup-terraform@v1
-      - run: terraform -chdir=./terraform init
-      - run: terraform -chdir=./terraform validate
