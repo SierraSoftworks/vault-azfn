@@ -33,6 +33,7 @@ resource "azurerm_key_vault" "unseal" {
       "Create",
       "Delete",
       "Update",
+      "GetRotationPolicy",
     ]
   }
 
