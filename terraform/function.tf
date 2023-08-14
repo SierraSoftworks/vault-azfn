@@ -25,7 +25,7 @@ resource "azurerm_linux_function_app" "server" {
     app_scale_limit = 1
 
     cors {
-      allowed_origins     = []
+      allowed_origins     = ["https://vault.${var.domain}"]
       support_credentials = false
     }
   }
