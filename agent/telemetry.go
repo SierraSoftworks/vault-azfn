@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -69,11 +70,7 @@ func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogSt
 
 func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 	if !strings.HasPrefix(string(p), `{"`) {
-		_, span := otel.Tracer("vault").Start(s.ctx, "log", trace.WithSpanKind(trace.SpanKindConsumer))
-		defer span.End()
-
-		span.SetName(string(p))
-		span.SetAttributes(attribute.String("raw_message", string(p)))
+		s.span.AddEvent("log", trace.WithAttributes(attribute.String("@message", string(p))))
 	} else {
 		for _, line := range strings.Split(strings.TrimSpace(string(p)), "\n") {
 			line := strings.TrimSpace(line)
@@ -82,7 +79,7 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 			}
 
 			if err := s.WriteMessage(line); err != nil {
-				s.span.RecordError(err, trace.WithAttributes(attribute.String("raw_message", line)))
+				s.span.RecordError(err, trace.WithAttributes(attribute.String("@message", line)))
 			}
 		}
 	}
@@ -91,18 +88,25 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 }
 
 func (s *TelemetryLogStream) WriteMessage(msg string) error {
-	_, span := otel.Tracer("vault").Start(s.ctx, "log", trace.WithSpanKind(trace.SpanKindConsumer))
-	defer span.End()
-
-	span.SetAttributes(attribute.String("raw_message", msg))
-
 	props := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(msg), &props); err != nil {
-		span.SetName(msg)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
+
+	name := toString(props["@module"])
+
+	timestamp := time.Now()
+	switch tss := props["@timestamp"].(type) {
+	case string:
+		ts, err := time.Parse("2006-01-02T15:04:05.000000Z", tss)
+		if err == nil {
+			timestamp = ts
+		}
+	default:
+	}
+
+	_, span := otel.Tracer("vault").Start(s.ctx, name, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attribute.String("@message", msg)), trace.WithTimestamp(timestamp), trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}), trace.WithNewRoot())
+	defer span.End()
 
 	properties := []attribute.KeyValue{}
 	for k, v := range props {
@@ -114,6 +118,19 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 		if k == "@level" && v == "error" {
 			span.SetStatus(codes.Error, toString(props["@message"]))
 			continue
+		}
+
+		if k == "@timestamp" {
+			continue
+		}
+
+		if k == "duration" {
+			ds := v.(string)
+			d, err := time.ParseDuration(ds)
+			if err == nil {
+				span.SetAttributes(attribute.Float64("duration_ms", float64(d.Milliseconds())))
+				continue
+			}
 		}
 
 		switch v := v.(type) {
@@ -131,8 +148,6 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 	}
 
 	span.SetAttributes(properties...)
-
-	span.SetName(toString(props["@message"]))
 
 	return nil
 }
