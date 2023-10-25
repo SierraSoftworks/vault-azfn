@@ -29,7 +29,7 @@ variable "vault_version" {
 
 variable "vault_agent_version" {
   description = "The version of the Vault Azure Functions host agent to use."
-  default     = "1.3.6"
+  default     = "1.4.0"
 }
 
 variable "vault_github_plugin_version" {
