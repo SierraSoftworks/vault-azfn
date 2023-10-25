@@ -24,12 +24,12 @@ variable "suffix" {
 
 variable "vault_version" {
   description = "The version of Hashicorp Vault to use."
-  default     = "1.13.0"
+  default     = "1.15.1"
 }
 
 variable "vault_agent_version" {
-  description = "The version of the Vault agent to use."
-  default     = "1.3.6"
+  description = "The version of the Vault Azure Functions host agent to use."
+  default     = "1.5.6"
 }
 
 variable "vault_github_plugin_version" {
