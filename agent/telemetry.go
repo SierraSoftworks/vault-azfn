@@ -93,7 +93,12 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 		return err
 	}
 
-	name := toString(props["@module"])
+	name := "log"
+	switch props["@module"] {
+	case nil:
+	default:
+		name = toString(props["@module"])
+	}
 
 	timestamp := time.Now()
 	switch tss := props["@timestamp"].(type) {
@@ -105,8 +110,15 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 	default:
 	}
 
-	_, span := otel.Tracer("vault").Start(s.ctx, name, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attribute.String("@message", msg)), trace.WithTimestamp(timestamp), trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}), trace.WithNewRoot())
-	defer span.End()
+	kind := trace.SpanKindInternal
+	if name == "core.completed_request" {
+		kind = trace.SpanKindServer
+	}
+
+	_, span := otel.Tracer("vault").Start(s.ctx, name, trace.WithSpanKind(kind), trace.WithAttributes(attribute.String("@message", msg)), trace.WithTimestamp(timestamp), trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}), trace.WithNewRoot())
+
+	endTime := timestamp
+	defer func() { span.End(trace.WithTimestamp(endTime)) }()
 
 	properties := []attribute.KeyValue{}
 	for k, v := range props {
@@ -128,7 +140,7 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 			ds := v.(string)
 			d, err := time.ParseDuration(ds)
 			if err == nil {
-				span.SetAttributes(attribute.Float64("duration_ms", float64(d.Milliseconds())))
+				endTime = timestamp.Add(d)
 				continue
 			}
 		}
