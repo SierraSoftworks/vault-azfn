@@ -93,6 +93,24 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 		return err
 	}
 
+	timestamp := getSpanStartTime(props)
+
+	_, span := otel.Tracer("vault").Start(
+		s.ctx,
+		getSpanName(props),
+		trace.WithSpanKind(getSpanKind(props)),
+		trace.WithAttributes(attribute.String("@message", msg)),
+		trace.WithTimestamp(timestamp),
+		trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}),
+		trace.WithNewRoot(),
+	)
+
+	setSpanPropertiesAndEnd(span, timestamp, props)
+
+	return nil
+}
+
+func getSpanName(props map[string]interface{}) string {
 	name := "log"
 	switch props["@module"] {
 	case nil:
@@ -100,6 +118,18 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 		name = toString(props["@module"])
 	}
 
+	return name
+}
+
+func getSpanKind(props map[string]interface{}) trace.SpanKind {
+	if props["@module"] == "core" && props["@message"] == "completed_request" {
+		return trace.SpanKindServer
+	}
+
+	return trace.SpanKindInternal
+}
+
+func getSpanStartTime(props map[string]interface{}) time.Time {
 	timestamp := time.Now()
 	switch tss := props["@timestamp"].(type) {
 	case string:
@@ -110,14 +140,11 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 	default:
 	}
 
-	kind := trace.SpanKindInternal
-	if name == "core.completed_request" {
-		kind = trace.SpanKindServer
-	}
+	return timestamp
+}
 
-	_, span := otel.Tracer("vault").Start(s.ctx, name, trace.WithSpanKind(kind), trace.WithAttributes(attribute.String("@message", msg)), trace.WithTimestamp(timestamp), trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}), trace.WithNewRoot())
-
-	endTime := timestamp
+func setSpanPropertiesAndEnd(span trace.Span, startTime time.Time, props map[string]interface{}) {
+	endTime := startTime
 	defer func() { span.End(trace.WithTimestamp(endTime)) }()
 
 	properties := []attribute.KeyValue{}
@@ -140,7 +167,7 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 			ds := v.(string)
 			d, err := time.ParseDuration(ds)
 			if err == nil {
-				endTime = timestamp.Add(d)
+				endTime = startTime.Add(d)
 				continue
 			}
 		}
@@ -161,7 +188,7 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 
 	span.SetAttributes(properties...)
 
-	return nil
+	span.End(trace.WithTimestamp(endTime))
 }
 
 func toString(v interface{}) string {
