@@ -24,7 +24,7 @@ variable "suffix" {
 
 variable "vault_version" {
   description = "The version of Hashicorp Vault to use."
-  default     = "1.15.4"
+  default     = "1.15.6"
 }
 
 variable "vault_agent_version" {
