@@ -37,6 +37,11 @@ variable "vault_github_plugin_version" {
   default     = "2.0.0"
 }
 
+variable "vault_acme_plugin_version" {
+  description = "The version of the Vault ACME plugin to use."
+  default     = "0.0.9"
+}
+
 variable "honeycomb_key" {
   description = "The Honeycomb API key to use for logging."
 }
