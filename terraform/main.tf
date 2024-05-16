@@ -39,7 +39,7 @@ variable "vault_github_plugin_version" {
 
 variable "vault_acme_plugin_version" {
   description = "The version of the Vault ACME plugin to use."
-  default     = "0.0.9"
+  default     = "0.3.0"
 }
 
 variable "honeycomb_key" {
