@@ -54,7 +54,7 @@ resource "null_resource" "acme_plugin_binary" {
   provisioner "local-exec" {
     command = <<EOH
 set -e
-curl -sSL -o vault-acme.zip https://github.com/remilapeyre/vault-acme/releases/download/v${var.vault_github_plugin_version}/linux_amd64.zip
+curl -sSL -o vault-acme.zip https://github.com/remilapeyre/vault-acme/releases/download/v${var.vault_acme_plugin_version}/linux_amd64.zip
 unzip vault-acme.zip
 chmod 0755 vault-acme/acme-plugin
 mkdir -p ${path.module}/../files/plugins
