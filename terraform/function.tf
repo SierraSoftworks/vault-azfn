@@ -52,7 +52,7 @@ resource "azurerm_linux_function_app" "server" {
       "VAULT_AZUREKEYVAULT_VAULT_NAME" : "${var.prefix}vault${var.suffix}"
       "VAULT_AZUREKEYVAULT_KEY_NAME" : "vault-unseal",
       "VAULT_API_ADDR" : "https://vault.${var.domain}",
-      "OTEL_EXPORTER_OTLP_ENDPOINT" : "https://api.honeycomb.io:443",
+      "OTEL_EXPORTER_OTLP_ENDPOINT" : "https://refinery.sierrasoftworks.com:443",
       "OTEL_EXPORTER_OTLP_HEADERS" : "x-honeycomb-team=${var.honeycomb_key}",
       "VAULT_AGENT_SET_EXECUTABLE_PATTERN" : "./plugins/*",
   })
