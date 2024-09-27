@@ -44,6 +44,7 @@ resource "azurerm_linux_function_app" "server" {
   app_settings = merge(
     data.azurerm_linux_function_app.server.app_settings,
     {
+      "FUNCTIONS_WORKER_RUNTIME" : "custom",
       "WEBSITE_RUN_FROM_PACKAGE" : "${azurerm_storage_blob.package.url}${data.azurerm_storage_account_blob_container_sas.package.sas}",
       "AZURE_TENANT_ID" : data.azurerm_client_config.current.tenant_id,
       "AZURE_ACCOUNT_NAME" : azurerm_storage_account.vault.name,
