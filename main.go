@@ -19,6 +19,10 @@ func main() {
 		logrus.Fatal("Usage: vault-launcher <app> [args...]")
 	}
 
+	logrus.SetFormatter(&logrus.TextFormatter{
+		DisableTimestamp: true,
+	})
+
 	ctx := context.Background()
 	tp, lp := agent.NewTraceProvider(ctx, version)
 	defer func() { _ = tp.Shutdown(ctx) }()
