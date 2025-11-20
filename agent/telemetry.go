@@ -185,7 +185,7 @@ func setSpanPropertiesAndEnd(span trace.Span, startTime time.Time, props map[str
 			continue
 		}
 
-		if k == "@level" && v == "error" {
+		if k == "level" && v == "error" {
 			span.SetStatus(codes.Error, toString(props["@message"]))
 			continue
 		}
@@ -223,11 +223,11 @@ func setSpanPropertiesAndEnd(span trace.Span, startTime time.Time, props map[str
 }
 
 func logMessage(startTime time.Time, props map[string]interface{}) {
-	level := props["@level"]
+	level := props["level"]
 	msg := toString(props["@message"])
 
 	delete(props, "@timestamp")
-	delete(props, "@level")
+	delete(props, "level")
 	delete(props, "@message")
 
 	event := logrus.WithTime(startTime).WithFields(props)
