@@ -12,17 +12,18 @@ data "azurerm_linux_function_app" "server" {
 }
 
 resource "azurerm_linux_function_app" "server" {
-  name                       = "${var.prefix}vault${var.suffix}"
-  location                   = azurerm_resource_group.server.location
-  resource_group_name        = azurerm_resource_group.server.name
-  service_plan_id            = azurerm_service_plan.server.id
-  storage_account_name       = azurerm_storage_account.server.name
-  storage_account_access_key = azurerm_storage_account.server.primary_access_key
+  name                          = "${var.prefix}vault${var.suffix}"
+  location                      = azurerm_resource_group.server.location
+  resource_group_name           = azurerm_resource_group.server.name
+  service_plan_id               = azurerm_service_plan.server.id
+  storage_account_name          = azurerm_storage_account.server.name
+  storage_uses_managed_identity = true
 
   https_only = true
 
   site_config {
     app_scale_limit = 1
+    http2_enabled   = true
 
     cors {
       allowed_origins     = ["https://vault.${var.domain}"]

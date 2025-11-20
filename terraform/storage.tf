@@ -10,7 +10,7 @@ resource "azurerm_storage_account" "vault" {
 
 resource "azurerm_storage_container" "data" {
   name                  = "vault"
-  storage_account_name  = azurerm_storage_account.vault.name
+  storage_account_id    = azurerm_storage_account.vault.id
   container_access_type = "private"
 }
 
@@ -28,10 +28,24 @@ resource "azurerm_storage_account" "server" {
   account_replication_type         = "ZRS"
   allow_nested_items_to_be_public  = false
   cross_tenant_replication_enabled = false
+  default_to_oauth_authentication  = true
+  local_user_enabled               = false
 }
 
 resource "azurerm_storage_container" "server" {
   name                  = "package"
-  storage_account_name  = azurerm_storage_account.server.name
+  storage_account_id    = azurerm_storage_account.server.id
   container_access_type = "private"
+}
+
+resource "azurerm_role_assignment" "function_storage_blob_data_owner" {
+  scope                = azurerm_storage_account.server.id
+  role_definition_name = "Storage Blob Data Owner"
+  principal_id         = azurerm_linux_function_app.server.identity[0].principal_id
+}
+
+resource "azurerm_role_assignment" "function_storage_account_contributor" {
+  scope                = azurerm_storage_account.server.id
+  role_definition_name = "Storage Account Contributor"
+  principal_id         = azurerm_linux_function_app.server.identity[0].principal_id
 }

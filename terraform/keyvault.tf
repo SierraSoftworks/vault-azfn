@@ -6,7 +6,7 @@ resource "azurerm_key_vault" "unseal" {
   name                       = "${var.prefix}vault${var.suffix}"
   location                   = var.location
   resource_group_name        = azurerm_resource_group.server.name
-  enable_rbac_authorization  = false
+  rbac_authorization_enabled = false
   tenant_id                  = data.azuread_client_config.current.tenant_id
   soft_delete_retention_days = 30
 
