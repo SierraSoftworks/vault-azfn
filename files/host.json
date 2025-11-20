@@ -2,11 +2,7 @@
   "version": "2.0",
   "logging": {
     "logLevel": {
-      "default": "Warning",
-      "Function": "Information",
-      "Function.function": "Information",
-      "Host.Function.Console": "Information",
-      "Vault": "Information"
+      "default": "Warning"
     }
   },
   "extensions": {
