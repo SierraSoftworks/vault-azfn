@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/sierrasoftworks/vault-azfn/agent"
+	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log/global"
 )
@@ -16,7 +16,7 @@ var version = "0.0.0-dev"
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: vault-launcher <app> [args...]")
+		logrus.Fatal("Usage: vault-launcher <app> [args...]")
 	}
 
 	ctx := context.Background()
@@ -29,7 +29,7 @@ func main() {
 
 	tmp, err := os.MkdirTemp(os.TempDir(), "vault")
 	if err != nil {
-		log.Fatal("Failed to create temporary directory: ", err)
+		logrus.Fatal("Failed to create temporary directory: ", err)
 	}
 	defer os.RemoveAll(tmp)
 
@@ -37,18 +37,18 @@ func main() {
 		if strings.HasSuffix(arg, ".tpl") {
 			f, err := os.Stat(arg)
 			if err != nil {
-				log.Println("Failed to render template file ", arg, ": ", err)
+				logrus.Error("Failed to render template file ", arg, ": ", err)
 				continue
 			}
 
 			if f.IsDir() {
-				log.Println("Failed to render template directory ", arg)
+				logrus.Error("Failed to render template directory ", arg)
 				continue
 			}
 
 			target := filepath.Join(tmp, arg[:len(arg)-len(".tpl")])
 			if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-				log.Fatal("Failed to create template target directory: ", err)
+				logrus.Fatal("Failed to create template target directory: ", err)
 				continue
 			}
 
@@ -65,6 +65,6 @@ func main() {
 	args := os.Args[2:]
 
 	if err = agent.RunApp(ctx, binary, args); err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 }
