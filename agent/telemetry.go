@@ -136,9 +136,36 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 		setSpanPropertiesAndEnd(span, timestamp, props)
 	}
 
-	logMessage(timestamp, props)
+	s.logMessage(timestamp, props)
 
 	return nil
+}
+
+func (s *TelemetryLogStream) logMessage(startTime time.Time, props map[string]interface{}) {
+	level := props["@level"]
+	msg := toString(props["@message"])
+
+	delete(props, "@timestamp")
+	delete(props, "@level")
+	delete(props, "@message")
+
+	event := logrus.
+		WithTime(startTime).
+		WithFields(props).
+		WithField("trace.trace_id", s.span.SpanContext().TraceID().String()).
+		WithField("trace.span_id", s.span.SpanContext().SpanID())
+	switch level {
+	case "debug":
+		event.Debug(msg)
+	case "info":
+		event.Info(msg)
+	case "warn":
+		event.Warn(msg)
+	case "error":
+		event.Error(msg)
+	default:
+		event.Info(msg)
+	}
 }
 
 func getSpanName(props map[string]interface{}) string {
@@ -220,29 +247,6 @@ func setSpanPropertiesAndEnd(span trace.Span, startTime time.Time, props map[str
 	span.SetAttributes(properties...)
 
 	span.End(trace.WithTimestamp(endTime))
-}
-
-func logMessage(startTime time.Time, props map[string]interface{}) {
-	level := props["@level"]
-	msg := toString(props["@message"])
-
-	delete(props, "@timestamp")
-	delete(props, "@level")
-	delete(props, "@message")
-
-	event := logrus.WithTime(startTime).WithFields(props)
-	switch level {
-	case "debug":
-		event.Debug(msg)
-	case "info":
-		event.Info(msg)
-	case "warn":
-		event.Warn(msg)
-	case "error":
-		event.Error(msg)
-	default:
-		event.Info(msg)
-	}
 }
 
 func toString(v interface{}) string {

@@ -2,7 +2,9 @@
   "version": "2.0",
   "logging": {
     "logLevel": {
-      "default": "Warning"
+      "default": "Warning",
+      "Function": "Warning",
+      "Function.function": "Warning"
     }
   },
   "extensions": {
