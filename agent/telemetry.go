@@ -8,19 +8,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/contrib/bridges/otellogrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func NewTraceProvider(ctx context.Context, version string) *sdktrace.TracerProvider {
+func NewTraceProvider(ctx context.Context, version string) (*sdktrace.TracerProvider, *log.LoggerProvider) {
 	resource, err := resource.Merge(
 		resource.Environment(),
 		resource.NewWithAttributes(
@@ -39,12 +43,20 @@ func NewTraceProvider(ctx context.Context, version string) *sdktrace.TracerProvi
 		panic(err)
 	}
 
+	loggerProvider, err := newLoggerProvider(ctx, resource)
+	if err != nil {
+		panic(err)
+	}
+
 	tracer := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource),
 	)
 
-	return tracer
+	hook := otellogrus.NewHook("vault", otellogrus.WithLoggerProvider(loggerProvider))
+	logrus.AddHook(hook)
+
+	return tracer, loggerProvider
 }
 
 func newExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
@@ -54,6 +66,19 @@ func newExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 
 	client := otlptracegrpc.NewClient()
 	return otlptrace.New(ctx, client)
+}
+
+func newLoggerProvider(ctx context.Context, res *resource.Resource) (*log.LoggerProvider, error) {
+	exporter, err := otlploggrpc.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+	processor := log.NewBatchProcessor(exporter)
+	provider := log.NewLoggerProvider(
+		log.WithResource(res),
+		log.WithProcessor(processor),
+	)
+	return provider, nil
 }
 
 type TelemetryLogStream struct {
@@ -95,17 +120,39 @@ func (s *TelemetryLogStream) WriteMessage(msg string) error {
 
 	timestamp := getSpanStartTime(props)
 
-	_, span := otel.Tracer("vault").Start(
-		s.ctx,
-		getSpanName(props),
-		trace.WithSpanKind(getSpanKind(props)),
-		trace.WithAttributes(attribute.String("@message", msg)),
-		trace.WithTimestamp(timestamp),
-		trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}),
-		trace.WithNewRoot(),
-	)
+	kind := getSpanKind(props)
+	if kind == trace.SpanKindServer {
+		_, span := otel.Tracer("vault").Start(
+			s.ctx,
+			getSpanName(props),
+			trace.WithSpanKind(kind),
+			trace.WithAttributes(attribute.String("@message", msg)),
+			trace.WithTimestamp(timestamp),
+			trace.WithLinks(trace.Link{SpanContext: s.span.SpanContext()}),
+			trace.WithNewRoot(),
+		)
 
-	setSpanPropertiesAndEnd(span, timestamp, props)
+		setSpanPropertiesAndEnd(span, timestamp, props)
+	}
+
+	level := props["@level"]
+	delete(props, "@level")
+	msg = toString(props["@message"])
+	delete(props, "@message")
+
+	event := logrus.WithContext(s.ctx).WithTime(timestamp).WithFields(props)
+	switch level {
+	case "debug":
+		event.Debug(msg)
+	case "info":
+		event.Info(msg)
+	case "warn":
+		event.Warn(msg)
+	case "error":
+		event.Error(msg)
+	default:
+		event.Info(msg)
+	}
 
 	return nil
 }

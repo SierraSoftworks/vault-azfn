@@ -9,6 +9,7 @@ import (
 
 	"github.com/sierrasoftworks/vault-azfn/agent"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/log/global"
 )
 
 var version = "0.0.0-dev"
@@ -19,10 +20,12 @@ func main() {
 	}
 
 	ctx := context.Background()
-	tp := agent.NewTraceProvider(ctx, version)
+	tp, lp := agent.NewTraceProvider(ctx, version)
 	defer func() { _ = tp.Shutdown(ctx) }()
+	defer func() { _ = lp.Shutdown(ctx) }()
 
 	otel.SetTracerProvider(tp)
+	global.SetLoggerProvider(lp)
 
 	tmp, err := os.MkdirTemp(os.TempDir(), "vault")
 	if err != nil {
