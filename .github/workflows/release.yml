@@ -18,7 +18,7 @@ jobs:
       - run: go test -v ./...
       - run: go build -o ./bin/vault-agent -ldflags "-X main.version=${{ github.event.release.tag_name }}" ./main.go
       - name: Publish Artifacts
-        uses: SierraSoftworks/gh-releases@v1.0.4
+        uses: SierraSoftworks/gh-releases@v1.0.8
         with:
           token: '${{ secrets.GITHUB_TOKEN }}'
           files: 'bin/vault-agent'
