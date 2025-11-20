@@ -95,7 +95,7 @@ func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogSt
 
 func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 	if !strings.HasPrefix(string(p), `{"`) {
-		logrus.Info(string(p))
+		logrus.WithContext(s.ctx).Info(string(p))
 	} else {
 		for _, line := range strings.Split(strings.TrimSpace(string(p)), "\n") {
 			line := strings.TrimSpace(line)
@@ -104,8 +104,8 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 			}
 
 			if err := s.WriteMessage(line); err != nil {
-				logrus.Info(line)
-				logrus.WithError(err).WithField("line", line).Warn("Failed to parse telemetry log message")
+				logrus.WithContext(s.ctx).Info(line)
+				logrus.WithContext(s.ctx).WithError(err).WithField("line", line).Warn("Failed to parse telemetry log message")
 			}
 		}
 	}
@@ -150,10 +150,9 @@ func (s *TelemetryLogStream) logMessage(startTime time.Time, props map[string]in
 	delete(props, "@message")
 
 	event := logrus.
+		WithContext(s.ctx).
 		WithTime(startTime).
-		WithFields(props).
-		WithField("trace.trace_id", s.span.SpanContext().TraceID().String()).
-		WithField("trace.span_id", s.span.SpanContext().SpanID())
+		WithFields(props)
 	switch level {
 	case "debug":
 		event.Debug(msg)
