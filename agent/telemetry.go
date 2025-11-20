@@ -95,7 +95,7 @@ func NewTelemetryLogStream(ctx context.Context, span trace.Span) *TelemetryLogSt
 
 func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 	if !strings.HasPrefix(string(p), `{"`) {
-		s.span.AddEvent("log", trace.WithAttributes(attribute.String("@message", string(p))))
+		logrus.Info(string(p))
 	} else {
 		for _, line := range strings.Split(strings.TrimSpace(string(p)), "\n") {
 			line := strings.TrimSpace(line)
@@ -104,7 +104,8 @@ func (s *TelemetryLogStream) Write(p []byte) (n int, err error) {
 			}
 
 			if err := s.WriteMessage(line); err != nil {
-				s.span.RecordError(err, trace.WithAttributes(attribute.String("@message", line)))
+				logrus.Info(line)
+				logrus.WithError(err).WithField("line", line).Warn("Failed to parse telemetry log message")
 			}
 		}
 	}
