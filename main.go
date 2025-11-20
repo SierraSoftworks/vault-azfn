@@ -47,7 +47,7 @@ func main() {
 			}
 
 			target := filepath.Join(tmp, arg[:len(arg)-len(".tpl")])
-			if err = os.MkdirAll(filepath.Base(target), 0755); err != nil {
+			if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				log.Fatal("Failed to create template target directory: ", err)
 				continue
 			}
