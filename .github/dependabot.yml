@@ -4,6 +4,10 @@ updates:
     package-ecosystem: gomod
     schedule:
       interval: daily
+    groups:
+      opentelemetry:
+        patterns:
+          - go.opentelemetry.io/otel*
   - directory: /terraform
     package-ecosystem: terraform
     schedule:
