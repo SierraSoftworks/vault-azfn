@@ -37,18 +37,27 @@ func main() {
 		if strings.HasSuffix(arg, ".tpl") {
 			f, err := os.Stat(arg)
 			if err != nil {
-				logrus.Error("Failed to render template file ", arg, ": ", err)
+				logrus.
+					WithField("template", arg).
+					WithError(err).
+					Error("Failed to render template file")
 				continue
 			}
 
 			if f.IsDir() {
-				logrus.Error("Failed to render template directory ", arg)
+				logrus.
+					WithField("template", arg).
+					Error("Failed to render template directory")
 				continue
 			}
 
 			target := filepath.Join(tmp, arg[:len(arg)-len(".tpl")])
 			if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-				logrus.Fatal("Failed to create template target directory: ", err)
+				logrus.
+					WithField("template", arg).
+					WithField("target", target).
+					WithError(err).
+					Fatal("Failed to create template target directory")
 				continue
 			}
 
@@ -65,6 +74,6 @@ func main() {
 	args := os.Args[2:]
 
 	if err = agent.RunApp(ctx, binary, args); err != nil {
-		logrus.Fatal(err)
+		logrus.WithError(err).WithField("binary", binary).WithField("args", args).Fatal("Failed to run vault")
 	}
 }
