@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/sierrasoftworks/vault-azfn/agent"
@@ -23,6 +24,12 @@ func main() {
 
 	otel.SetTracerProvider(tp)
 
+	tmp, err := os.MkdirTemp(os.TempDir(), "vault")
+	if err != nil {
+		log.Fatal("Failed to create temporary directory: ", err)
+	}
+	defer os.RemoveAll(tmp)
+
 	for i, arg := range os.Args[1:] {
 		if strings.HasSuffix(arg, ".tpl") {
 			f, err := os.Stat(arg)
@@ -33,10 +40,17 @@ func main() {
 
 			if f.IsDir() {
 				log.Println("Failed to render template directory ", arg)
+				continue
 			}
 
-			agent.ApplyTemplate(arg, arg[:len(arg)-len(".tpl")])
-			os.Args[i+1] = arg[:len(arg)-len(".tpl")]
+			target := filepath.Join(tmp, arg[:len(arg)-len(".tpl")])
+			if err = os.MkdirAll(filepath.Base(target), 0755); err != nil {
+				log.Fatal("Failed to create template target directory: ", err)
+				continue
+			}
+
+			agent.ApplyTemplate(arg, target)
+			os.Args[i+1] = target
 		}
 	}
 
@@ -47,8 +61,7 @@ func main() {
 	binary := os.Args[1]
 	args := os.Args[2:]
 
-	err := agent.RunApp(ctx, binary, args)
-	if err != nil {
+	if err = agent.RunApp(ctx, binary, args); err != nil {
 		log.Fatal(err)
 	}
 }
