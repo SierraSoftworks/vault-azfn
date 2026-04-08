@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/sirupsen/logrus v1.9.4
-	go.opentelemetry.io/contrib/bridges/otellogrus v0.17.0
+	go.opentelemetry.io/contrib/bridges/otellogrus v0.18.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.19.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0
