@@ -11,6 +11,11 @@ terraform {
       source  = "hashicorp/azuread"
       version = "~> 3.8.0"
     }
+
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 }
 
@@ -36,6 +41,8 @@ provider "azuread" {
   // NOTE: You can retrieve this secret using `op read op://epfkgzb2bz4msye2xrhffiz3se/jrlwg64m56hkbkbfvgljfkwcfy/Azure/client_secret`
   tenant_id = var.azure_tenant
 }
+
+provider "cloudflare" {}
 
 variable "azure_subscription" {
 
