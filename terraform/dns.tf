@@ -1,10 +1,8 @@
 data "cloudflare_zones" "dns" {
-  filter = {
-    account = {
-      id = var.cloudflare_account_id
-    }
-    name = var.domain
+  account = {
+    id = var.cloudflare_account_id
   }
+  name = var.domain
 }
 
 resource "azurerm_dns_cname_record" "vault" {
