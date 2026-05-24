@@ -1,3 +1,10 @@
+data "cloudflare_zones" "dns" {
+  account = {
+    id = var.cloudflare_account_id
+  }
+  name = var.domain
+}
+
 resource "azurerm_dns_cname_record" "vault" {
   name                = "vault"
   resource_group_name = "dns"
@@ -17,3 +24,20 @@ resource "azurerm_dns_txt_record" "vault" {
   }
 }
 
+resource "cloudflare_dns_record" "vault" {
+  zone_id = one(data.cloudflare_zones.dns.result).id
+  name    = "vault"
+  ttl     = 300
+  type    = "CNAME"
+  content = "${azurerm_linux_function_app.server.name}.azurewebsites.net"
+  proxied = false
+}
+
+resource "cloudflare_dns_record" "vault_asuid" {
+  zone_id = one(data.cloudflare_zones.dns.result).id
+  name    = "asuid.vault"
+  ttl     = 300
+  type    = "TXT"
+  content = azurerm_linux_function_app.server.custom_domain_verification_id
+  proxied = false
+}

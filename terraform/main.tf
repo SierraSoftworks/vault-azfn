@@ -45,3 +45,7 @@ variable "vault_acme_plugin_version" {
 variable "honeycomb_key" {
   description = "The Honeycomb API key to use for logging."
 }
+
+variable "cloudflare_account_id" {
+  description = "The Cloudflare account ID used to locate the DNS zone."
+}
