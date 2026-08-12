@@ -82,10 +82,9 @@ resource "azurerm_storage_blob" "package" {
       filesha256("${path.module}/../files/config/vault.hcl.tpl"),
     ])
   )}.zip"
-  storage_account_name   = azurerm_storage_account.server.name
-  storage_container_name = azurerm_storage_container.server.name
-  type                   = "Block"
-  source                 = data.archive_file.server.output_path
+  storage_container_id = azurerm_storage_container.server.id
+  type                 = "Block"
+  source               = data.archive_file.server.output_path
   lifecycle {
     create_before_destroy = true
   }
