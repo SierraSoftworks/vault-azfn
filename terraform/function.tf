@@ -122,12 +122,33 @@ resource "azurerm_app_service_custom_hostname_binding" "vault" {
   ]
 }
 
-resource "azurerm_app_service_managed_certificate" "vault" {
-  custom_hostname_binding_id = azurerm_app_service_custom_hostname_binding.vault.id
+# Flex Consumption apps use site-scoped certificates (Microsoft.Web/sites/certificates), which
+# azurerm's managed certificate and certificate binding resources don't support, so both the
+# certificate and its SNI binding go through azapi.
+resource "azapi_resource" "vault_certificate" {
+  type      = "Microsoft.Web/sites/certificates@2024-11-01"
+  name      = "vault.${var.domain}"
+  parent_id = azurerm_function_app_flex_consumption.server.id
+  location  = azurerm_resource_group.server.location
+
+  body = {
+    properties = {
+      canonicalName = azurerm_app_service_custom_hostname_binding.vault.hostname
+      serverFarmId  = azurerm_service_plan.server.id
+    }
+  }
+
+  response_export_values = ["properties.thumbprint"]
 }
 
-resource "azurerm_app_service_certificate_binding" "vault" {
-  hostname_binding_id = azurerm_app_service_custom_hostname_binding.vault.id
-  certificate_id      = azurerm_app_service_managed_certificate.vault.id
-  ssl_state           = "SniEnabled"
+resource "azapi_update_resource" "vault_certificate_binding" {
+  type        = "Microsoft.Web/sites/hostNameBindings@2024-11-01"
+  resource_id = azurerm_app_service_custom_hostname_binding.vault.id
+
+  body = {
+    properties = {
+      sslState   = "SniEnabled"
+      thumbprint = azapi_resource.vault_certificate.output.properties.thumbprint
+    }
+  }
 }

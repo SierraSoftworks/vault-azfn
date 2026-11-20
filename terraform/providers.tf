@@ -12,6 +12,11 @@ terraform {
       version = "~> 3.10.0"
     }
 
+    azapi = {
+      source  = "azure/azapi"
+      version = "~> 2.14"
+    }
+
     cloudflare = {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
@@ -40,6 +45,13 @@ provider "azurerm" {
 provider "azuread" {
   // NOTE: You can retrieve this secret using `op read op://epfkgzb2bz4msye2xrhffiz3se/jrlwg64m56hkbkbfvgljfkwcfy/Azure/client_secret`
   tenant_id = var.azure_tenant
+}
+
+provider "azapi" {
+  # Unlike azurerm, azapi only uses HCP Terraform's dynamic (OIDC) credentials when told to.
+  use_oidc        = true
+  subscription_id = var.azure_subscription
+  tenant_id       = var.azure_tenant
 }
 
 provider "cloudflare" {}
