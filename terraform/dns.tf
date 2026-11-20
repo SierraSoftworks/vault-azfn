@@ -6,7 +6,7 @@ data "cloudflare_zones" "dns" {
 }
 
 resource "cloudflare_dns_record" "vault" {
-  zone_id = one(data.cloudflare_zones.dns.result).id
+  zone_id = data.cloudflare_zones.dns.result[0].id
   name    = "vault"
   ttl     = 300
   type    = "CNAME"
@@ -15,7 +15,7 @@ resource "cloudflare_dns_record" "vault" {
 }
 
 resource "cloudflare_dns_record" "vault_asuid" {
-  zone_id = one(data.cloudflare_zones.dns.result).id
+  zone_id = data.cloudflare_zones.dns.result[0].id
   name    = "asuid.vault"
   ttl     = 300
   type    = "TXT"
