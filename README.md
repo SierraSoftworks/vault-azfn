@@ -1,7 +1,7 @@
 # Hashicorp Vault on Azure Functions
 Do you love the idea of running Hashicorp's (phenomenal) Vault, but can't
 stomach the idea of spending hundreds of dollars per month hosting a cluster?
-Yeah, me too - so here's a better idea: let's run it on Azure Functions Consumption Plan,
+Yeah, me too - so here's a better idea: let's run it on the Azure Functions Flex Consumption Plan,
 scale to zero when we don't use it, pay a few cents per month
 and still have all the lovely functionality we wanted in the first place.
 

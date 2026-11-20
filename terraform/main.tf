@@ -49,3 +49,8 @@ variable "honeycomb_key" {
 variable "cloudflare_account_id" {
   description = "The Cloudflare account ID used to locate the DNS zone."
 }
+
+variable "always_ready_instances" {
+  description = "Number of always-ready instances for HTTP triggers. 0 keeps scale-to-zero; 1 removes cold starts at a small fixed monthly cost."
+  default     = 0
+}

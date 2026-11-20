@@ -62,16 +62,9 @@ EOH
   }
 }
 
-data "archive_file" "server" {
-  depends_on = [null_resource.vault_binary, null_resource.agent_binary, null_resource.github_plugin_binary, null_resource.acme_plugin_binary]
-
-  type        = "zip"
-  output_path = "${path.module}/build/package.zip"
-  source_dir  = "${path.module}/../files/"
-}
-
-resource "azurerm_storage_blob" "package" {
-  name = "${sha256(
+locals {
+  # Changes whenever any packaged component changes, so a new path forces a fresh zip deployment.
+  package_hash = sha256(
     join(":", [
       var.vault_version,
       "agent-${var.vault_agent_version}",
@@ -81,28 +74,13 @@ resource "azurerm_storage_blob" "package" {
       filesha256("${path.module}/../files/function/function.json"),
       filesha256("${path.module}/../files/config/vault.hcl.tpl"),
     ])
-  )}.zip"
-  storage_container_id = azurerm_storage_container.server.id
-  type                 = "Block"
-  source               = data.archive_file.server.output_path
-  lifecycle {
-    create_before_destroy = true
-  }
+  )
 }
 
-data "azurerm_storage_account_blob_container_sas" "package" {
-  connection_string = azurerm_storage_account.server.primary_connection_string
-  container_name    = azurerm_storage_container.server.name
+data "archive_file" "server" {
+  depends_on = [null_resource.vault_binary, null_resource.agent_binary, null_resource.github_plugin_binary, null_resource.acme_plugin_binary]
 
-  start  = timestamp()
-  expiry = timeadd(timestamp(), "8000h")
-
-  permissions {
-    read   = true
-    add    = false
-    create = false
-    write  = false
-    delete = false
-    list   = false
-  }
+  type        = "zip"
+  output_path = "${path.module}/build/${local.package_hash}.zip"
+  source_dir  = "${path.module}/../files/"
 }
