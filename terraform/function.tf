@@ -57,6 +57,12 @@ resource "azurerm_function_app_flex_consumption" "server" {
   }
 
   app_settings = {
+    # With SystemAssignedIdentity storage auth, azurerm sets AzureWebJobsStorage to a connection
+    # string with an empty AccountKey, which stops the Functions host from starting. Blank it and
+    # point the host at its storage account by identity instead.
+    "AzureWebJobsStorage" : "",
+    "AzureWebJobsStorage__accountName" : azurerm_storage_account.server.name,
+    "AzureWebJobsStorage__credential" : "managedidentity",
     "AZURE_TENANT_ID" : data.azurerm_client_config.current.tenant_id,
     "AZURE_ACCOUNT_NAME" : azurerm_storage_account.vault.name,
     "AZURE_BLOB_CONTAINER" : azurerm_storage_container.data.name,
