@@ -4,6 +4,13 @@ resource "azurerm_service_plan" "server" {
   resource_group_name = azurerm_resource_group.server.name
   os_type             = "Linux"
   sku_name            = "FC1"
+
+  lifecycle {
+    # If an FC1 plan reads back without `reserved`, azurerm reports it as Windows and, since os_type
+    # forces replacement, would rebuild the plan (and with it the function app) on every apply.
+    ignore_changes  = [os_type]
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_function_app_flex_consumption" "server" {
@@ -50,6 +57,10 @@ resource "azurerm_function_app_flex_consumption" "server" {
   }
 
   lifecycle {
+    # Replacing the app mints a new identity, orphaning its role assignments, Key Vault policy and
+    # hostname bindings. Fail the plan instead, so any replacement is a deliberate migration.
+    prevent_destroy = true
+
     ignore_changes = [
       site_config[0].application_insights_key,
       site_config[0].application_insights_connection_string,
