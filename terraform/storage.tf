@@ -17,7 +17,7 @@ resource "azurerm_storage_container" "data" {
 resource "azurerm_role_assignment" "vault_data" {
   scope                = azurerm_resource_group.data.id
   role_definition_name = "Storage Account Contributor"
-  principal_id         = azurerm_linux_function_app.server.identity.0.principal_id
+  principal_id         = azurerm_function_app_flex_consumption.server.identity.0.principal_id
 }
 
 resource "azurerm_storage_account" "server" {
@@ -41,11 +41,11 @@ resource "azurerm_storage_container" "server" {
 resource "azurerm_role_assignment" "function_storage_blob_data_owner" {
   scope                = azurerm_storage_account.server.id
   role_definition_name = "Storage Blob Data Owner"
-  principal_id         = azurerm_linux_function_app.server.identity[0].principal_id
+  principal_id         = azurerm_function_app_flex_consumption.server.identity[0].principal_id
 }
 
 resource "azurerm_role_assignment" "function_storage_account_contributor" {
   scope                = azurerm_storage_account.server.id
   role_definition_name = "Storage Account Contributor"
-  principal_id         = azurerm_linux_function_app.server.identity[0].principal_id
+  principal_id         = azurerm_function_app_flex_consumption.server.identity[0].principal_id
 }

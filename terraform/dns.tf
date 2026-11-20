@@ -10,7 +10,7 @@ resource "azurerm_dns_cname_record" "vault" {
   resource_group_name = "dns"
   zone_name           = var.domain
   ttl                 = 300
-  record              = "${azurerm_linux_function_app.server.name}.azurewebsites.net"
+  record              = azurerm_function_app_flex_consumption.server.default_hostname
 }
 
 resource "azurerm_dns_txt_record" "vault" {
@@ -20,7 +20,7 @@ resource "azurerm_dns_txt_record" "vault" {
   ttl                 = 300
 
   record {
-    value = azurerm_linux_function_app.server.custom_domain_verification_id
+    value = azurerm_function_app_flex_consumption.server.custom_domain_verification_id
   }
 }
 
@@ -29,7 +29,7 @@ resource "cloudflare_dns_record" "vault" {
   name    = "vault"
   ttl     = 300
   type    = "CNAME"
-  content = "${azurerm_linux_function_app.server.name}.azurewebsites.net"
+  content = azurerm_function_app_flex_consumption.server.default_hostname
   proxied = false
 }
 
@@ -38,6 +38,6 @@ resource "cloudflare_dns_record" "vault_asuid" {
   name    = "asuid.vault"
   ttl     = 300
   type    = "TXT"
-  content = azurerm_linux_function_app.server.custom_domain_verification_id
+  content = azurerm_function_app_flex_consumption.server.custom_domain_verification_id
   proxied = false
 }

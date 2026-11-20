@@ -15,8 +15,8 @@ resource "azurerm_key_vault" "unseal" {
   enabled_for_deployment = true
 
   access_policy {
-    tenant_id = azurerm_linux_function_app.server.identity.0.tenant_id
-    object_id = azurerm_linux_function_app.server.identity.0.principal_id
+    tenant_id = azurerm_function_app_flex_consumption.server.identity.0.tenant_id
+    object_id = azurerm_function_app_flex_consumption.server.identity.0.principal_id
     key_permissions = [
       "Get",
       "WrapKey",
