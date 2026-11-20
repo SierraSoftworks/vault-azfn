@@ -32,8 +32,6 @@ resource "azurerm_function_app_flex_consumption" "server" {
     }
   }
 
-  zip_deploy_file = data.archive_file.server.output_path
-
   https_only = true
 
   site_config {
@@ -75,6 +73,40 @@ resource "azurerm_function_app_flex_consumption" "server" {
   }
 }
 
+locals {
+  # The SCM (Kudu) site lives at <app>.scm.<rest of the default hostname>.
+  scm_hostname = replace(azurerm_function_app_flex_consumption.server.default_hostname, "/^([^.]+)\\./", "$1.scm.")
+}
+
+# Publishes the package to the app. This is deliberately not `zip_deploy_file` on the app itself:
+# azurerm pushes that through the classic Kudu zipdeploy endpoints, which Flex apps answer with a
+# 404, failing (and tainting) the app on every create. Publishing separately also lets the app's
+# identity be granted access to the deployment container before the package is pushed.
+resource "terraform_data" "deploy" {
+  triggers_replace = [
+    azurerm_function_app_flex_consumption.server.id,
+    local.package_hash,
+  ]
+
+  provisioner "local-exec" {
+    command = "${path.module}/scripts/deploy.sh"
+
+    environment = {
+      SCM_HOST    = local.scm_hostname
+      PACKAGE     = data.archive_file.server.output_path
+      DEPLOY_USER = nonsensitive(azurerm_function_app_flex_consumption.server.site_credential[0].name)
+      # Marked nonsensitive so that Terraform doesn't suppress the script's output, which we need
+      # to diagnose failed deployments. The script never prints it.
+      DEPLOY_PASSWORD = nonsensitive(azurerm_function_app_flex_consumption.server.site_credential[0].password)
+    }
+  }
+
+  depends_on = [
+    azurerm_role_assignment.function_storage_blob_data_owner,
+    azurerm_role_assignment.function_storage_account_contributor,
+  ]
+}
+
 resource "azurerm_app_service_custom_hostname_binding" "vault" {
   hostname            = "vault.${var.domain}"
   app_service_name    = azurerm_function_app_flex_consumption.server.name
@@ -85,9 +117,8 @@ resource "azurerm_app_service_custom_hostname_binding" "vault" {
   }
 
   depends_on = [
-    azurerm_dns_txt_record.vault,
-    azurerm_dns_cname_record.vault,
     cloudflare_dns_record.vault,
+    cloudflare_dns_record.vault_asuid,
   ]
 }
 
