@@ -84,3 +84,14 @@ data "archive_file" "server" {
   output_path = "${path.module}/build/${local.package_hash}.zip"
   source_dir  = "${path.module}/../files/"
 }
+
+# The Y1 app loaded its package from this blob. Forget it rather than destroying it: the blob's
+# create_before_destroy state, inherited by the binaries and archive the new app depends on,
+# otherwise forms a dependency cycle with the Flex app during the cutover.
+removed {
+  from = azurerm_storage_blob.package
+
+  lifecycle {
+    destroy = false
+  }
+}
