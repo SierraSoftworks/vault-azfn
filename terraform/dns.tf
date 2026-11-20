@@ -5,25 +5,6 @@ data "cloudflare_zones" "dns" {
   name = var.domain
 }
 
-resource "azurerm_dns_cname_record" "vault" {
-  name                = "vault"
-  resource_group_name = "dns"
-  zone_name           = var.domain
-  ttl                 = 300
-  record              = azurerm_function_app_flex_consumption.server.default_hostname
-}
-
-resource "azurerm_dns_txt_record" "vault" {
-  name                = "asuid.vault"
-  resource_group_name = "dns"
-  zone_name           = var.domain
-  ttl                 = 300
-
-  record {
-    value = azurerm_function_app_flex_consumption.server.custom_domain_verification_id
-  }
-}
-
 resource "cloudflare_dns_record" "vault" {
   zone_id = one(data.cloudflare_zones.dns.result).id
   name    = "vault"
